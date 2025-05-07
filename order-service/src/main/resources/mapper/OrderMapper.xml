@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.douyinmall.order.mapper.OrderMapper">
+        <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+                insert into `order`
+                (number,status,user_id,address_id,order_time,checkout_time,pay_status,
+                 total_amount,phone,address,consignee,cancel_reason,cancel_time,delivery_status,delivery_time)
+                values
+                        (#{number},#{status},#{userId},#{addressId},#{orderTime},#{checkoutTime},#{payStatus},
+                         #{totalAmount},#{phone},#{address},#{consignee},#{cancelReason},#{cancelTime},
+                         #{deliveryStatus},#{deliveryTime})
+        </insert>
+        <insert id="insertOrderDetail">
+                insert into order_detail
+                (name,image,order_id,product_id,number,amount)
+                values
+                        (#{name},#{image},#{orderId},#{productId},#{number},#{amount})
+        </insert>
+
+        <update id="updateStatus" parameterType="com.douyinmall.order.domain.DTO.OrderUpdate">
+                UPDATE `order`
+                <set>
+                        <if test="status!= null">
+                                status = #{status},
+                        </if>
+                        <if test="checkoutTime!= null">
+                                checkout_time = #{checkoutTime},
+                        </if>
+                        <if test="payStatus!= null">
+                                pay_status = #{payStatus},
+                        </if>
+                        <if test="cancelReason!= null">
+                                cancel_reason = #{cancelReason},
+                        </if>
+                        <if test="cancelTime!= null">
+                                cancel_time = #{cancelTime},
+                        </if>
+                        <if test="deliveryStatus!= null">
+                                delivery_status = #{deliveryStatus},
+                        </if>
+                        <if test="deliveryTime!= null">
+                                delivery_time = #{deliveryTime},
+                        </if>
+                </set>
+                WHERE id = #{id}
+        </update>
+
+        <!-- 查询订单及订单明细 -->
+        <select id="pageQuery" resultType="com.douyinmall.order.domain.VO.Order">
+                SELECT * FROM `order`
+                <where>
+                        <if test="number != null and number!=''">
+                                and number like concat('%',#{number},'%')
+                        </if>
+                        <if test="phone != null and phone!=''">
+                                and phone like concat('%',#{phone},'%')
+                        </if>
+                        <if test="userId != null">
+                                and user_id = #{userId}
+                        </if>
+                        <if test="status != null">
+                                and status = #{status}
+                        </if>
+                        <if test="beginTime != null">
+                                and order_time &gt;= #{beginTime}
+                        </if>
+                        <if test="endTime != null">
+                                and order_time &lt;= #{endTime}
+                        </if>
+                </where>
+                ORDER BY
+                order_time DESC
+        </select>
+
+        <select id="pageQuery_COUNT" resultType="java.lang.Long">
+                SELECT COUNT(*) FROM `order` WHERE user_id = #{userId}
+                <if test="number != null and number!=''">
+                        AND number LIKE CONCAT('%', #{number}, '%')
+                </if>
+                <if test="phone != null and phone!=''">
+                        AND phone LIKE CONCAT('%', #{phone}, '%')
+                </if>
+                <if test="status != null">
+                        AND status = #{status}
+                </if>
+                <if test="beginTime != null">
+                        AND order_time &gt;= #{beginTime}
+                </if>
+                <if test="endTime != null">
+                        AND order_time &lt;= #{endTime}
+                </if>
+        </select>
+        <select id="selectDetailsByOrderIds" resultType="com.douyinmall.order.domain.VO.OrderDetail">
+                SELECT * FROM order_detail
+                WHERE order_id IN
+                <foreach collection="orderIds" item="id" open="(" separator="," close=")">
+                        #{id}
+                </foreach>
+        </select>
+</mapper>

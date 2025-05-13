@@ -17,13 +17,25 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpHost;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.MultiMatchQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 
 
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -141,6 +153,43 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Product> implements
                         .toList();
                 updateBatchById(products);
                 stringRedisTemplate.keys("product_list:*").forEach(stringRedisTemplate::delete);
+        }
+
+        @Override
+        public List<Product> searchProduct(String description) throws IOException {
+                RestHighLevelClient client = new RestHighLevelClient(
+                        RestClient.builder(
+                                HttpHost.create("http://192.168.163.129:9200")
+                        )
+                );
+
+                List<Product> result = new ArrayList<>();
+
+                // 1. 创建搜索请求
+                SearchRequest request = new SearchRequest("product_index");
+
+                // 2. 构建查询条件：同时搜索 name 和 description 字段（分词匹配）
+                MultiMatchQueryBuilder query = QueryBuilders.multiMatchQuery(description, "name", "description")
+                        .type(MultiMatchQueryBuilder.Type.BEST_FIELDS)  // 匹配最佳字段（默认策略）
+                         .minimumShouldMatch("35%");  // 最少匹配 35% 的分词
+                // 3. 配置搜索源（可添加分页、排序等，此处简化）
+                request.source().query(query);
+
+                // 4. 执行搜索
+                SearchResponse searchResponse = client.search(request, RequestOptions.DEFAULT);
+                SearchHits hits = searchResponse.getHits();
+
+                // 5. 处理搜索结果
+                for (SearchHit hit : hits) {
+                        String sourceJson = hit.getSourceAsString();
+                        Product product = JSONUtil.toBean(sourceJson, Product.class);
+                        result.add(product);
+                }
+
+                        client.close();
+
+
+                return result;
         }
 
 

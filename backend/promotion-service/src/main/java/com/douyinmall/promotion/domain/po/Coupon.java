@@ -57,6 +57,15 @@ public class Coupon implements Serializable {
     @Schema(description = "获取方式：1：手动领取，2：兑换码")
     private ObtainType obtainWay;
 
+    @Schema(description ="折扣门槛，0代表无门槛")
+    private Integer thresholdAmount;
+
+    @Schema(description ="折扣值，满减填抵扣金额；打折填折扣值：80标示打8折")
+    private Integer discountValue;
+
+    @Schema(description ="最大优惠金额")
+    private Integer maxDiscountAmount;
+
     @Schema(description = "开始发放时间")
     private LocalDateTime issueBeginTime;
 
@@ -101,6 +110,5 @@ public class Coupon implements Serializable {
 
     @Schema(description = "更新人")
     private Long updater=0L;
-
 
 }

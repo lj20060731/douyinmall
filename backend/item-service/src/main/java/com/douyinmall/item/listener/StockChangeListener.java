@@ -1,5 +1,6 @@
 package com.douyinmall.item.listener;
 
+
 import com.douyinmall.common.entity.StockChangeMessage;
 import com.douyinmall.item.config.RabbitMQConfig;
 import com.douyinmall.item.service.ShopService;

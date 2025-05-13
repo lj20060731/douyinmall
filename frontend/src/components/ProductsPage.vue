@@ -7,11 +7,47 @@
     <el-tab-pane label="订单" name="order"></el-tab-pane>
     <el-tab-pane label="退出登录" name="logout"></el-tab-pane>
   </el-tabs>
+  <div class="search-container">
+    <el-input 
+      v-model="searchKeyword" 
+      placeholder="输入商品描述搜索" 
+      clearable 
+      @keyup.enter="handleSearch"
+      class="search-input"
+    >
+      <template #append>
+        <el-button-group>
+          <el-button 
+            @click="handleSearch" 
+            class="search-btn"
+          >
+            <font-awesome-icon :icon="['fas', 'magnifying-glass']" class="search-icon"/>
+            <span class="search-text">搜索</span>
+          </el-button>
+          <el-button 
+            @click="handleAIClick" 
+            class="ai-btn"
+            :disabled="isAILoading"
+          >
+            <el-icon v-if="!isAILoading" class="magic-icon"><MagicStick /></el-icon>
+            <el-icon v-else class="loading-icon"><Loading /></el-icon>
+            <span class="ai-text">
+              {{ isAILoading ? '润色中...' : 'AI润色✨' }}
+            </span>
+          </el-button>
+        </el-button-group>
+      </template>
+    </el-input>
+  </div>
   <router-view></router-view>
 
   <!-- 商品展示部分 -->
   <div class="product-list">
-    <div v-for="product in currentPageProducts" :key="product.id" class="product-item">
+    <div 
+      v-for="product in showProducts" 
+      :key="product.id" 
+      class="product-item"
+    >
       <img :src="product.image" alt="商品图片" class="product-image" />
       <div class="product-info">
         <h3>{{ product.name }}</h3>
@@ -29,10 +65,13 @@
       <i class="el-icon-loading"></i>
     </div>
     <!-- 分页组件放在商品列表下方 -->
-    <div class="pagination">
+    <div class="pagination" v-if="!hasSearched">
       <button @click="prevPage" :disabled="currentPage === 1" class="pagination-button">上一页</button>
       <span>{{ currentPage }} / {{ totalPages }}</span>
       <button @click="nextPage" :disabled="currentPage === totalPages" class="pagination-button">下一页</button>
+    </div>
+    <div v-if="showNoResults" class="no-results">
+      没有找到相关商品
     </div>
   </div>
 </template>
@@ -119,6 +158,119 @@ const products = ref([]);
 const totalProducts = ref(0); // 初始值设为 0
 // 加载状态
 const isLoading = ref(false);
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  stock: number;
+  image: string;
+}
+
+const searchKeyword = ref('');
+const searchResults = ref<Product[]>([]);
+const isSearching = ref(false);
+
+// 计算属性：显示的商品列表
+const showProducts = computed(() => {
+  return hasSearched.value ? searchResults.value : currentPageProducts.value;
+});
+
+const hasSearched = ref(false);
+
+// 计算属性：显示无结果提示
+const showNoResults = computed(() => {
+  return hasSearched.value && !isLoading.value && searchResults.value.length === 0;
+});
+
+
+// 搜索处理方法
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    searchResults.value = [];
+    hasSearched.value = false;
+    return;
+  }
+  try {
+    hasSearched.value = true;
+    isSearching.value = true;
+    isLoading.value = true;
+    
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      const confirmed = confirm('未找到令牌，请先登录');
+      if (confirmed) router.push('/login');
+      return;
+    }
+
+    const response = await axios.get('http://127.0.0.1:9997/shop/searchproduct', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { description: searchKeyword.value.trim() }
+    });
+
+    if (response.data.code === 200) {
+      searchResults.value = response.data.data;
+    } else {
+      ElMessage.error('搜索失败: ' + (response.data.message || '未知错误'));
+      searchResults.value = [];
+    }
+  } catch (error) {
+    console.error('搜索请求出错:', error);
+    ElMessage.error('搜索失败，请检查网络连接');
+    searchResults.value = [];
+  } finally {
+    isSearching.value = false;
+    isLoading.value = false;
+  }
+};
+
+// 监听搜索关键字变化
+watch(searchKeyword, (newVal) => {
+  if (!newVal) {
+    searchResults.value = [];
+    hasSearched.value = false; // 重置搜索状态
+  }
+});
+
+const isAILoading = ref(false);
+
+const handleAIClick = async () => {
+  try {
+    isAILoading.value = true; 
+    const text = searchKeyword.value.trim();
+    if (!text) {
+      ElMessage.warning('请输入需要润色的描述内容');
+      return;
+    }
+
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      const confirmed = confirm('未找到令牌，请先登录');
+      if (confirmed) router.push('/login');
+      return;
+    }
+    
+    const response = await axios.get('http://127.0.0.1:9997/shop/generate', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { message: text }
+    });
+
+    isLoading.value = true;
+
+    if (response.data.code === 200) {
+      searchKeyword.value = response.data.data;
+      ElMessage.success('AI润色完成');
+    } else {
+      ElMessage.error('润色失败: ' + (response.data.message || '未知错误'));
+    }
+  } catch (error) {
+    console.error('AI润色请求出错:', error);
+    ElMessage.error('润色失败，请检查网络连接');
+  } finally {
+    isAILoading.value = false;
+  }
+};
 
 // 获取当前页的商品
 const currentPageProducts = computed(() => {
@@ -320,6 +472,182 @@ onMounted(fetchProducts);
   color: #888;
 }
 
+.search-container {
+  margin: 20px auto;
+  max-width: 600px;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  border-radius: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.search-input:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+
+
+/* 搜索按钮 */
+.search-btn {
+  padding: 0 25px !important;
+  background: linear-gradient(135deg, #3a7afe, #2f5bff) !important;
+  border: none !important;
+  height: 40px;
+  transition: all 0.3s ease;
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 3px 6px rgba(58, 122, 254, 0.2);
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(58, 122, 254, 0.3);
+  opacity: 0.95;
+}
+
+.search-icon {
+  font-size: 16px;
+  color: white;
+  transition: transform 0.2s ease;
+}
+
+.search-btn:hover .search-icon {
+  transform: scale(1.1);
+}
+
+.search-text {
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  font-size: 14px;
+}
+
+/* 输入框聚焦效果优化 */
+:deep(.el-input__inner) {
+  border-radius: 30px !important;
+  padding-left: 20px !important;
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  opacity: 0.95;
+}
+
+/* AI按钮 */
+.ai-btn {
+  padding: 0 ;
+  margin-left: 0px;
+  background: linear-gradient(135deg, #3dd2d2, #ae2cbf);
+  border: none;
+  border-radius: 25px;
+  color: white;
+  display: flex;
+  height: 40px;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+
+.ai-btn::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { left: -50% }
+  100% { left: 150% }
+}
+
+.magic-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.ai-text {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #333;
+}
+
+.el-button-group {
+  display: flex;
+}
+
+.el-button {
+  padding: 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.el-button:first-child {
+  border-radius: 0;
+}
+
+.el-button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.el-button--success {
+  background-color: #67c23a;
+  border-color: #67c23a;
+}
+
+.el-button--success:hover {
+  background-color: #85ce61;
+  border-color: #85ce61;
+}
+
+.no-results {
+  font-size: 18px;
+  padding: 30px;
+  color: #909399;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 40px auto;
+  width: fit-content;
+}
+
+loading-icon {
+  animation: spin 1s linear infinite;
+  font-size: 16px;
+}
+
+.ai-btn[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* 添加到购物车按钮 */
 .add-to-cart-button {
   position: absolute;
@@ -341,8 +669,11 @@ onMounted(fetchProducts);
 
 /* 分页按钮 */
 .pagination {
-  margin-top: 400px;
-  margin: 40p;
+  margin: 40px 0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  align-items: center;
 }
 
 .pagination-button {
@@ -429,9 +760,9 @@ onMounted(fetchProducts);
 }
 
 .loading-spinner i {
-  font-size: 24px;
-  color: #409EFF;
-  animation: spin 1s linear infinite;
+  font-size: 32px;
+  color: #67c23a;
+  filter: drop-shadow(0 2px 4px rgba(103, 194, 58, 0.2));
 }
 
 @keyframes spin {

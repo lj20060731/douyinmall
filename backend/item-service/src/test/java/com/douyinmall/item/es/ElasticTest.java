@@ -18,28 +18,38 @@
 //public class ElasticTest {
 //        private RestHighLevelClient client;
 //
-//        private static final String MAPPING = "{\n" +
+//        private static final String MAPPING ="{\n" +
 //                "  \"mappings\": {\n" +
 //                "    \"properties\": {\n" +
 //                "      \"id\": {\n" +
-//                "        \"type\": \"keyword\"\n" +
-//                "      },\n" +
-//                "      \"name\":{\n" +
-//                "        \"type\": \"text\",\n" +
-//                "        \"analyzer\": \"ik_smart\"\n" +
-//                "      },\n" +
-//                "      \"price\":{\n" +
-//                "        \"type\": \"float\"\n" +
-//                "      },\n" +
-//                "      \"stock\":{\n" +
 //                "        \"type\": \"integer\"\n" +
 //                "      },\n" +
-//                "      \"image\":{\n" +
+//                "      \"image\": {\n" +
 //                "        \"type\": \"keyword\",\n" +
 //                "        \"index\": false\n" +
 //                "      },\n" +
-//                "      \"description\":{\n" +
-//                "        \"type\": \"keyword\"\n" +
+//                "      \"name\": {\n" +
+//                "        \"type\": \"text\",\n" +
+//                "        \"analyzer\": \"ik_smart\",\n" +
+//                "        \"fields\": {\n" +
+//                "          \"keyword\": {\n" +
+//                "            \"type\": \"keyword\"\n" +
+//                "          }\n" +
+//                "        }\n" +
+//                "      },\n" +
+//                "      \"price\": {\n" +
+//                "        \"type\": \"scaled_float\",\n" +
+//                "        \"scaling_factor\": 100\n" +
+//                "      },\n" +
+//                "      \"description\": {\n" +
+//                "        \"type\": \"text\",\n" +
+//                "        \"analyzer\": \"ik_smart\"\n" +
+//                "      },\n" +
+//                "      \"stock\": {\n" +
+//                "        \"type\": \"long\"\n" +
+//                "      },\n" +
+//                "      \"product_type\": {\n" +
+//                "        \"type\": \"integer\"\n" +
 //                "      }\n" +
 //                "    }\n" +
 //                "  }\n" +

@@ -84,14 +84,54 @@
                         <artifactId>elasticsearch-rest-high-level-client</artifactId>
                         <version>7.12.1</version>
                 </dependency>
+                <dependency>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+                </dependency>
                 <!--hutool-->
                 <dependency>
                         <groupId>cn.hutool</groupId>
                         <artifactId>hutool-all</artifactId>
-                        <!-- 可根据需求修改为最新稳定版本 -->
                         <version>5.8.20</version>
                 </dependency>
+                <!--springai-->
+                <dependency>
+                        <groupId>org.springframework.ai</groupId>
+                        <artifactId>spring-ai-starter-model-zhipuai</artifactId>
+                </dependency>
         </dependencies>
+        <dependencyManagement>
+                <dependencies>
+                        <dependency>
+                                <groupId>org.springframework.ai</groupId>
+                                <artifactId>spring-ai-bom</artifactId>
+                                <version>1.0.0-SNAPSHOT</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                        </dependency>
+                </dependencies>
+        </dependencyManagement>
+        <repositories>
+                <repository>
+                        <id>spring-snapshots</id>
+                        <name>Spring Snapshots</name>
+                        <url>https://repo.spring.io/snapshot</url>
+                        <releases>
+                                <enabled>false</enabled>
+                        </releases>
+                </repository>
+                <repository>
+                        <id>central-portal-snapshots</id>
+                        <name>Central Portal Snapshots</name>
+                        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                        <releases>
+                                <enabled>false</enabled>
+                        </releases>
+                        <snapshots>
+                                <enabled>true</enabled>
+                        </snapshots>
+                </repository>
+        </repositories>
         <properties>
                 <maven.compiler.source>17</maven.compiler.source>
                 <maven.compiler.target>17</maven.compiler.target>
